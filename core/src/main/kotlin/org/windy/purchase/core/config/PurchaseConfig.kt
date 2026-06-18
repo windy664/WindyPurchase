@@ -43,6 +43,20 @@ class PurchaseConfig private constructor(private val map: Map<String, Any?>) {
     /** 内嵌 Web 管理面板静态页（支付回调等 API 始终可用，不受此开关影响）。 */
     fun moduleDashboard(): Boolean = get("modules.dashboard", false)
 
+    // ==================== 游戏内地图二维码（进阶/默认关） ====================
+    /** 是否启用地图二维码注入。默认关：可靠扫码靠聊天链接+ASCII（始终生效）。 */
+    fun mapQrEnabled(): Boolean = get("map-qr.enabled", false)
+    fun mapQrSetSlotPacketId(): Int = get("map-qr.packet-set-slot", 0x14)
+    fun mapQrMapDataPacketId(): Int = get("map-qr.packet-map-data", 0x27)
+    fun mapQrFilledMapItemId(): Int = get("map-qr.filled-map-item-id", 358)
+    fun mapQrRestoreDelaySeconds(): Long = get("map-qr.restore-delay-seconds", 5).toLong()
+    /** 客户端协议号白名单（留空=不校验直接尝试）。 */
+    fun mapQrSupportedProtocols(): Set<Int> {
+        @Suppress("UNCHECKED_CAST")
+        val raw = get("map-qr.supported-protocols", emptyList<Any?>()) as? List<Any?> ?: return emptySet()
+        return raw.mapNotNull { (it as? Number)?.toInt() }.toSet()
+    }
+
     // ==================== Mock（测试用） ====================
     fun mockEnabled(): Boolean = get("mock.enabled", true)
     /** 自动确认延迟（毫秒），0 = 手动确认 */
@@ -171,6 +185,23 @@ modules:
   ranking: false
   # 内嵌 Web 管理面板静态页（前端后续单独开发；API 不受影响）
   dashboard: false
+
+# 游戏内地图二维码（进阶功能，默认关闭）
+# 原理：向客户端注入原始协议包，把二维码渲染到一张临时地图上。较脆弱：
+# 不同 MC 版本的包 ID / 物品网络 ID 不同，开启前需对照你的服务端版本调整下列值。
+# 默认关闭即可：玩家始终能收到聊天框可点链接 + ASCII 二维码（可靠且跨版本）。
+map-qr:
+  enabled: false
+  # 客户端协议号白名单（留空=不校验直接尝试）。例：1.20.5=766, 1.21=767
+  supported-protocols: []
+  # Clientbound Set Container Slot 包 ID（默认 0x14，按 1.20.5+）
+  packet-set-slot: 0x14
+  # Clientbound Map Data 包 ID（默认 0x27）
+  packet-map-data: 0x27
+  # filled_map 物品网络 ID（默认 358）
+  filled-map-item-id: 358
+  # 展示后恢复原物品的延迟（秒）
+  restore-delay-seconds: 5
 
 # Mock 支付（测试用，生产环境请关闭）
 # /purchase pay 0.01 mock → 自动确认到账

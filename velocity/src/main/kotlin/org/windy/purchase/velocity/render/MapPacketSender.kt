@@ -21,31 +21,55 @@ object MapPacketSender {
     private val log = LoggerFactory.getLogger(MapPacketSender::class.java)
     private const val COLOR_BLACK: Byte = 19
     private const val COLOR_WHITE: Byte = 34
-    private const val PKT_SET_CONTAINER_SLOT = 0x14
-    private const val PKT_MAP_DATA = 0x27
 
-    fun sendMapQrCode(player: Player, qrContent: String, mapId: Int = 9999) {
-        try {
+    /**
+     * 地图二维码发包参数。不同 MC 版本包 ID / 物品网络 ID 不同，做成可配置而非写死。
+     * @param supportedProtocols 客户端协议号白名单；非空时仅对名单内版本发包，避免向其他版本注入错误包 ID 导致连接错乱。空=不校验。
+     */
+    data class MapQrParams(
+        val setSlotPacketId: Int = 0x14,
+        val mapDataPacketId: Int = 0x27,
+        val filledMapItemId: Int = 358,
+        val restoreDelaySeconds: Long = 5,
+        val supportedProtocols: Set<Int> = emptySet()
+    )
+
+    /**
+     * 向玩家客户端注入地图二维码。
+     * @return true=已发送；false=跳过/失败（调用方应回退到聊天链接，通常已先行发送）。
+     */
+    fun sendMapQrCode(player: Player, qrContent: String, mapId: Int = 9999, params: MapQrParams = MapQrParams()): Boolean {
+        // 协议版本守卫：名单非空且玩家版本不在内，则跳过，避免错误包 ID 打乱客户端连接
+        if (params.supportedProtocols.isNotEmpty()) {
+            val proto = player.protocolVersion.protocol
+            if (proto !in params.supportedProtocols) {
+                log.warn("玩家 {} 协议号 {} 不在地图二维码支持列表，跳过（回退聊天链接）", player.username, proto)
+                return false
+            }
+        }
+        return try {
             val channel = getNettyChannel(player) ?: run {
-                log.warn("Cannot get Netty channel for {}", player.username)
-                return
+                log.warn("拿不到 {} 的 Netty Channel，跳过地图二维码（回退聊天链接）", player.username)
+                return false
             }
 
-            val setSlotBuf = buildSetContainerSlot(mapId)
-            val mapDataBuf = buildMapData(mapId, qrContent)
+            val setSlotBuf = buildSetContainerSlot(mapId, params.setSlotPacketId, params.filledMapItemId)
+            val mapDataBuf = buildMapData(mapId, qrContent, params.mapDataPacketId)
             channel.write(setSlotBuf)
             channel.write(mapDataBuf)
             channel.flush()
 
-            // 5 秒后恢复
-            val restoreBuf = buildSetContainerSlot(-1)
+            // 延迟恢复原物品
+            val restoreBuf = buildSetContainerSlot(-1, params.setSlotPacketId, params.filledMapItemId)
             channel.eventLoop().schedule({
                 try { channel.writeAndFlush(restoreBuf) } catch (_: Exception) {}
-            }, 5, java.util.concurrent.TimeUnit.SECONDS)
+            }, params.restoreDelaySeconds, java.util.concurrent.TimeUnit.SECONDS)
 
             log.info("Map QR sent to {} (mapId={})", player.username, mapId)
+            true
         } catch (e: Exception) {
-            log.warn("Map QR failed for {}: {}", player.username, e.message)
+            log.warn("地图二维码发送失败 {}（回退聊天链接）: {}", player.username, e.message)
+            false
         }
     }
 
@@ -84,9 +108,9 @@ object MapPacketSender {
         return null
     }
 
-    private fun buildSetContainerSlot(mapId: Int): ByteBuf {
+    private fun buildSetContainerSlot(mapId: Int, packetId: Int, filledMapItemId: Int): ByteBuf {
         val buf = Unpooled.buffer()
-        buf.writeVarInt(PKT_SET_CONTAINER_SLOT)
+        buf.writeVarInt(packetId)
         buf.writeByte(0)     // window ID = player inventory
         buf.writeVarInt(0)   // state ID
         buf.writeShort(36)   // slot = main hand in inventory window
@@ -94,7 +118,7 @@ object MapPacketSender {
             buf.writeBoolean(false)  // empty item
         } else {
             buf.writeBoolean(true)
-            buf.writeVarInt(getFilledMapItemId())
+            buf.writeVarInt(filledMapItemId)
             buf.writeByte(1)  // count
             // components: map_id
             buf.writeVarInt(1)  // set count
@@ -105,10 +129,10 @@ object MapPacketSender {
         return buf
     }
 
-    private fun buildMapData(mapId: Int, qrContent: String): ByteBuf {
+    private fun buildMapData(mapId: Int, qrContent: String, packetId: Int): ByteBuf {
         val pixels = generateQrPixels(qrContent, 128)
         val buf = Unpooled.buffer()
-        buf.writeVarInt(PKT_MAP_DATA)
+        buf.writeVarInt(packetId)
         buf.writeVarInt(mapId)
         buf.writeByte(0)       // scale
         buf.writeBoolean(false) // tracking
@@ -121,8 +145,6 @@ object MapPacketSender {
         buf.writeBytes(pixels)
         return buf
     }
-
-    private fun getFilledMapItemId(): Int = 358
 
     fun generateQrPixels(content: String, size: Int): ByteArray {
         val hints = mapOf(

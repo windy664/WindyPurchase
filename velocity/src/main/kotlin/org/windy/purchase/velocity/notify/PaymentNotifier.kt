@@ -142,13 +142,21 @@ class PaymentNotifier(
      * 需要子服有对应的 mod/plugin 接收并执行 /give + 转发地图包。
      */
     private fun sendMapData(player: com.velocitypowered.api.proxy.Player, order: Order) {
+        if (!config.mapQrEnabled()) return  // 默认关闭；聊天链接+ASCII 已是可靠投递
         val qrUrl = order.qrCodeUrl ?: return
         val mapId = order.orderId.hashCode() and 0x7FFFFFFF
-        try {
-            MapPacketSender.sendMapQrCode(player, qrUrl, mapId)
-        } catch (e: Exception) {
+        val params = MapPacketSender.MapQrParams(
+            setSlotPacketId = config.mapQrSetSlotPacketId(),
+            mapDataPacketId = config.mapQrMapDataPacketId(),
+            filledMapItemId = config.mapQrFilledMapItemId(),
+            restoreDelaySeconds = config.mapQrRestoreDelaySeconds(),
+            supportedProtocols = config.mapQrSupportedProtocols()
+        )
+        // 失败/跳过时返回 false；聊天可点链接已在 onOrderCreated 先行发送，玩家仍可支付
+        val ok = MapPacketSender.sendMapQrCode(player, qrUrl, mapId, params)
+        if (!ok) {
             org.slf4j.LoggerFactory.getLogger(PaymentNotifier::class.java)
-                .debug("Map QR send failed: {}", e.message)
+                .debug("地图二维码未送达 {}，已回退聊天链接", player.username)
         }
     }
 }
