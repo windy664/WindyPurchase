@@ -12,10 +12,13 @@ build/
 .DS_Store
 Thumbs.db
 
-# Local runtime / secrets
+# Local runtime / secrets（仅忽略运行时生成的，不含 src 资源模板）
 *.log
-config.yml
-products.yml
+/config.yml
+/products.yml
+/run/
 *.db
 *.db-shm
 *.db-wal
+# 资源模板必须入库
+!core/src/main/resources/config.yml
