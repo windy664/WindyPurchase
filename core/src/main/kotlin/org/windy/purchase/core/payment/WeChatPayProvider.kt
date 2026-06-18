@@ -2,6 +2,7 @@ package org.windy.purchase.core.payment
 
 import com.wechat.pay.java.core.Config
 import com.wechat.pay.java.core.RSAAutoCertificateConfig
+import com.wechat.pay.java.core.notification.NotificationConfig
 import com.wechat.pay.java.core.notification.NotificationParser
 import com.wechat.pay.java.core.notification.RequestParam
 import com.wechat.pay.java.service.payments.model.Transaction
@@ -99,24 +100,47 @@ class WeChatPayProvider(
     }
 
     /**
-     * 解析微信支付异步回调通知。
-     * @return 解析成功返回 Transaction，否则 null
-     */
-    /**
-     * 解析微信支付回调通知。
-     * 简化实现：直接解析 JSON body，不走 SDK 的签名验证（由上层验签）。
+     * 验签并解密微信支付异步回调通知。
+     *
+     * 真实 APIv3 回调的 resource 是 AES-256-GCM 密文，且带 Wechatpay-* 验签头。
+     * 这里走 SDK 的 NotificationParser：内部完成 RSA 验签 + APIv3 密钥解密，
+     * 验签失败会抛异常 → 返回 null → 上层拒单（fails closed）。
+     *
+     * @return 验签且解密成功返回结果，否则 null（视为非法回调拒绝）
      */
     fun parseNotify(headers: Map<String, String>, body: String): SimpleNotifyResult? {
         return try {
-            val json = com.fasterxml.jackson.databind.ObjectMapper().readTree(body)
-            val resource = json["resource"] ?: return null
+            fun header(name: String): String? =
+                headers.entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value
+
+            val serial = header("Wechatpay-Serial")
+            val nonce = header("Wechatpay-Nonce")
+            val signature = header("Wechatpay-Signature")
+            val timestamp = header("Wechatpay-Timestamp")
+            if (serial == null || nonce == null || signature == null || timestamp == null) {
+                log.warn("微信回调缺少验签头，拒绝: serial={} nonce存在={} sig存在={} ts={}", serial, nonce != null, signature != null, timestamp)
+                return null
+            }
+
+            val requestParam = RequestParam.Builder()
+                .serialNumber(serial)
+                .nonce(nonce)
+                .signature(signature)
+                .timestamp(timestamp)
+                .body(body)
+                .build()
+
+            val parser = NotificationParser(config as NotificationConfig)
+            // parse 内部完成验签 + 解密；验签失败直接抛异常
+            val tx: Transaction = parser.parse(requestParam, Transaction::class.java)
+
             SimpleNotifyResult(
-                outTradeNo = resource["out_trade_no"]?.asText() ?: return null,
-                tradeState = resource["trade_state"]?.asText() ?: "",
-                totalAmount = resource["amount"]?.get("total")?.asInt() ?: 0
+                outTradeNo = tx.outTradeNo ?: return null,
+                tradeState = tx.tradeState?.name ?: "",
+                totalAmount = tx.amount?.total ?: 0
             )
         } catch (e: Exception) {
-            log.error("微信回调解析失败", e)
+            log.error("微信回调验签/解析失败（已拒单）", e)
             null
         }
     }
