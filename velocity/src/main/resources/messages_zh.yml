@@ -1,0 +1,110 @@
+# ============================================
+# WindyPurchase 消息模板 (中文)
+# ============================================
+# 复制为 messages.yml 并按需修改。
+# config.yml 中设置 locale: "zh" 使用中文。
+
+order:
+  created: "§a订单已创建！请完成支付："
+  qr-url: "§e点击打开支付: %url%"
+  paid: "§a支付成功！感谢充值 %amount%。"
+  expired: "§c订单已过期。"
+  cancelled: "§c订单已取消。"
+  broadcast: "§6[充值] §e%player% §a购买了 §e%amount%§a！"
+
+payment:
+  alipay:
+    label: "§e§l[点击打开支付宝]"
+    hover: "§7点击在浏览器中打开支付宝支付页面"
+  wechat:
+    label: "§e§l[点击打开微信支付]"
+    hover: "§7点击在浏览器中打开微信支付页面"
+  paypal:
+    label: "§e§l[点击前往 PayPal 支付]"
+    hover: "§7点击在浏览器中打开 PayPal 结账页面"
+  afdian:
+    label: "§e§l[点击前往爱发电赞助]"
+    hover: "§7点击在浏览器中打开爱发电赞助页面\n§7请在留言中填写你的游戏名"
+  afdian-remark: "§c§l重要：§e赞助时请在「留言」中填写你的游戏名 §f%player%"
+  afdian-remark-hint: "§7否则无法自动到账！"
+
+link: "§7链接: %url%"
+order-id: "§7订单号: %id%"
+
+command:
+  help:
+    title: "§6====== WindyPurchase ======"
+    list: "§e/purchase list §f- 查看商品列表"
+    buy: "§e/purchase buy <商品ID> [alipay|wechat|paypal|afdian] §f- 购买商品"
+    pay: "§e/purchase pay <金额> [alipay|wechat|paypal|afdian] §f- 直接充值"
+    history: "§e/purchase history §f- 查看订单记录"
+    check: "§e/purchase check <订单ID> §f- 查询订单状态"
+  list:
+    title: "§6====== 商品列表 ======"
+    item: "§e%id% §f- §a%name% §f| §6%price% %currency%"
+    empty: "§c暂无可购买的商品。"
+    hint: "§7使用 /purchase buy <商品ID> 购买"
+  buy:
+    usage: "§c用法: /purchase buy <商品ID> [alipay|wechat|paypal|afdian]"
+    no-product: "§c商品不存在: %id%"
+    no-permission: "§c你没有权限购买此商品。"
+    creating: "§a正在创建订单..."
+    failed: "§c创建订单失败，请稍后重试。"
+  pay:
+    usage: "§c用法: /purchase pay <金额> [alipay|wechat|paypal|afdian]"
+    invalid-amount: "§c金额无效，最小 %min% %currency%。"
+    creating: "§a正在创建订单..."
+    failed: "§c创建订单失败，请稍后重试。"
+  history:
+    title: "§6====== 最近订单 ======"
+    item: "§f%id% §7| §6%amount% §7| %status%"
+    empty: "§7暂无订单记录。"
+  check:
+    usage: "§c用法: /purchase check <订单ID>"
+    not-found: "§c订单不存在。"
+    title: "§6====== 订单详情 ======"
+    order-id: "§f订单号: %id%"
+    amount: "§f金额: §6%amount% %currency%"
+    status: "§f状态: %status%"
+    method: "§f支付方式: %method%"
+    created: "§f创建时间: %time%"
+    paid: "§f支付时间: %time%"
+  select-method: "§e请选择支付方式: %methods%"
+  select-method-hint: "§7用法: /purchase pay <金额> <alipay|wechat|paypal|afdian>"
+  no-method: "§c没有可用的支付方式，请联系管理员。"
+  player-only: "§c此命令只能由玩家执行。"
+
+admin:
+  help:
+    title: "§6====== WindyPurchase 管理 ======"
+    reload: "§e/purchaseadmin reload §f- 重载商品配置"
+    stats: "§e/purchaseadmin stats §f- 充值统计"
+    check: "§e/purchaseadmin check <订单ID> §f- 查看订单详情"
+    products: "§e/purchaseadmin products §f- 商品列表"
+  reload:
+    success: "§a已重载 %count% 个商品。"
+    no-file: "§cproducts.yml 不存在。"
+    note: "§e注意: 支付配置修改需要重启服务器才能生效。"
+  stats:
+    title: "§6====== 充值统计 ======"
+    total: "§f总充值额: §6%amount% %currency%"
+    today: "§f今日充值: §6%amount% %currency%"
+    orders: "§f总订单数: §e%count%"
+    ranking-title: "§6------ 充值排行 ------"
+    ranking-item: "§e%rank%. §f%player% §7- §6%amount% %currency%"
+  products:
+    title: "§6====== 商品列表 ======"
+    item: "§e%id% §f| §a%name% §f| §6%price% %currency%"
+    commands: "  §7命令: %cmds%"
+    permission: "  §7权限: %perm%"
+    cooldown: "  §7冷却: %sec%秒"
+    empty: "§c暂无商品。"
+
+status:
+  pending: "§e待支付"
+  paid: "§a已支付"
+  expired: "§c已过期"
+  cancelled: "§c已取消"
+
+health:
+  ok: "§a正常"

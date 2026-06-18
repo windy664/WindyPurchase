@@ -1,0 +1,10 @@
+// ============================================================
+// bukkit — Bukkit/Paper 预留模块（暂空壳）
+//   后期再实现 Bukkit 端的具体逻辑
+// ============================================================
+
+dependencies {
+    compileOnly 'org.slf4j:slf4j-api:1.7.36'
+    compileOnly 'org.spigotmc:spigot-api:1.20.4-R0.1-SNAPSHOT'
+    implementation project(':core')
+}

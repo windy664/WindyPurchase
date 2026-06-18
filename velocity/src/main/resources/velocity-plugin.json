@@ -1,0 +1,9 @@
+{
+  "id": "windypurchase",
+  "name": "WindyPurchase",
+  "version": "1.0-SNAPSHOT",
+  "description": "In-game payment plugin for Minecraft (Alipay / WeChat Pay)",
+  "authors": [],
+  "dependencies": [],
+  "entrypoint": "org.windy.purchase.velocity.WindyPurchasePlugin"
+}

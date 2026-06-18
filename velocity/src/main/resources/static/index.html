@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WindyPurchase 管理面板</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #1a1a2e; color: #e0e0e0; }
+        h1 { color: #00d4aa; }
+        .card { background: #16213e; border-radius: 8px; padding: 20px; margin: 16px 0; }
+        .stat { display: inline-block; margin: 0 20px 10px 0; }
+        .stat-value { font-size: 2em; color: #00d4aa; font-weight: bold; }
+        .stat-label { color: #888; font-size: 0.9em; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #2a2a4a; }
+        th { color: #00d4aa; }
+        .badge { padding: 2px 8px; border-radius: 4px; font-size: 0.85em; }
+        .badge-paid { background: #00d4aa22; color: #00d4aa; }
+        .badge-pending { background: #ffaa0022; color: #ffaa00; }
+        .badge-expired { background: #ff444422; color: #ff4444; }
+        button { background: #00d4aa; color: #1a1a2e; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #00b894; }
+        #token-prompt { text-align: center; margin-top: 100px; }
+        #token-prompt input { background: #2a2a4a; border: 1px solid #444; color: #e0e0e0; padding: 8px 12px; border-radius: 4px; margin: 0 8px; }
+    </style>
+</head>
+<body>
+    <div id="token-prompt">
+        <h1>WindyPurchase</h1>
+        <p>请输入管理 Token：</p>
+        <input type="password" id="token-input" placeholder="Token">
+        <button onclick="login()">登录</button>
+    </div>
+
+    <div id="app" style="display:none">
+        <h1>WindyPurchase</h1>
+
+        <div class="card">
+            <h2>充值统计</h2>
+            <div class="stat"><div class="stat-value" id="total">-</div><div class="stat-label">总充值（元）</div></div>
+            <div class="stat"><div class="stat-value" id="today">-</div><div class="stat-label">今日（元）</div></div>
+            <div class="stat"><div class="stat-value" id="orders-count">-</div><div class="stat-label">总订单数</div></div>
+        </div>
+
+        <div class="card">
+            <h2>最近订单</h2>
+            <table>
+                <thead><tr><th>订单号</th><th>玩家</th><th>金额</th><th>方式</th><th>状态</th><th>时间</th></tr></thead>
+                <tbody id="orders-table"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>商品管理</h2>
+            <div id="products-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let TOKEN = localStorage.getItem('wp_token') || '';
+
+        function login() {
+            TOKEN = document.getElementById('token-input').value;
+            localStorage.setItem('wp_token', TOKEN);
+            init();
+        }
+
+        async function api(path, opts = {}) {
+            const sep = path.includes('?') ? '&' : '?';
+            const res = await fetch(path + (TOKEN ? sep + 'token=' + TOKEN : ''), opts);
+            return res.json();
+        }
+
+        async function init() {
+            try {
+                const health = await api('/api/health');
+                if (health.error) { alert('Token 无效'); return; }
+            } catch { alert('连接失败'); return; }
+
+            document.getElementById('token-prompt').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+
+            loadStats();
+            loadOrders();
+            loadProducts();
+        }
+
+        async function loadStats() {
+            const s = await api('/api/revenue');
+            document.getElementById('total').textContent = (s.totalAmount / 100).toFixed(2);
+            document.getElementById('today').textContent = (s.todayAmount / 100).toFixed(2);
+            document.getElementById('orders-count').textContent = s.totalOrders;
+        }
+
+        async function loadOrders() {
+            const data = await api('/api/orders?size=20');
+            const tbody = document.getElementById('orders-table');
+            tbody.innerHTML = (data.data || []).map(o => `
+                <tr>
+                    <td>${o.orderId.slice(0,8)}...</td>
+                    <td>${o.playerName}</td>
+                    <td>¥${(o.amount/100).toFixed(2)}</td>
+                    <td>${o.paymentMethod}</td>
+                    <td><span class="badge badge-${o.status.toLowerCase()}">${o.status}</span></td>
+                    <td>${new Date(o.createdAt).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadProducts() {
+            const products = await api('/api/products');
+            document.getElementById('products-list').innerHTML = products.map(p => `
+                <div style="margin:10px 0;padding:10px;background:#2a2a4a;border-radius:4px">
+                    <strong>${p.name}</strong> (${p.id}) — ¥${(p.price/100).toFixed(2)}
+                    <br><small style="color:#888">命令: ${p.commands.join(', ')}</small>
+                </div>
+            `).join('');
+        }
+
+        // 自动登录
+        if (TOKEN) init();
+    </script>
+</body>
+</html>

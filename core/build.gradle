@@ -1,0 +1,28 @@
+// ============================================================
+// core — 平台无关核心库
+//   订单/商品模型、支付接口抽象、数据库、配置加载、工具类
+//   不依赖任何具体平台（Velocity / Bukkit）
+// ============================================================
+
+dependencies {
+    // slf4j 门面：运行时由宿主提供
+    compileOnly 'org.slf4j:slf4j-api:1.7.36'
+
+    // SQLite JDBC
+    implementation 'org.xerial:sqlite-jdbc:3.45.1.0'
+
+    // 支付宝 SDK（Maven Central 可用的最新版本）
+    implementation 'com.alipay.sdk:alipay-sdk-java:4.9.79.ALL'
+
+    // 微信支付 SDK（JitPack）
+    implementation 'com.github.wechatpay-apiv3:wechatpay-java:0.2.17'
+
+    // 二维码生成
+    implementation 'com.google.zxing:core:3.5.3'
+
+    // YAML 配置
+    implementation 'org.yaml:snakeyaml:2.2'
+
+    // Jackson（AfdianProvider / 内部数据处理）
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+}

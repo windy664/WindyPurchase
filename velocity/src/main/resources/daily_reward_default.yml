@@ -1,0 +1,8 @@
+# 每日首充奖励（默认配置，可在 config.yml 中覆盖）
+enabled: false
+# 最低首充金额（元）
+min-amount: 10
+# 奖励命令
+commands:
+  - "give %player% diamond 16"
+  - "msg %player% §a每日首充奖励已发放！"

@@ -1,0 +1,21 @@
+# Build output
+build/
+*/build/
+.gradle/
+.kotlin/
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local runtime / secrets
+*.log
+config.yml
+products.yml
+*.db
+*.db-shm
+*.db-wal

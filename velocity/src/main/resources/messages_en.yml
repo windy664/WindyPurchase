@@ -1,0 +1,110 @@
+# ============================================
+# WindyPurchase Messages (English)
+# ============================================
+# Copy this file to messages.yml and translate as needed.
+# Set locale: "en" in config.yml to use English.
+
+order:
+  created: "§aOrder created! Please complete payment:"
+  qr-url: "§eClick to open payment: %url%"
+  paid: "§aPayment successful! Thank you for your %amount% purchase."
+  expired: "§cOrder expired."
+  cancelled: "§cOrder cancelled."
+  broadcast: "§6[Store] §e%player% §apurchased §e%amount%§a!"
+
+payment:
+  alipay:
+    label: "§e§l[Click to open Alipay]"
+    hover: "§7Open Alipay payment page in browser"
+  wechat:
+    label: "§e§l[Click to open WeChat Pay]"
+    hover: "§7Open WeChat payment page in browser"
+  paypal:
+    label: "§e§l[Pay with PayPal]"
+    hover: "§7Open PayPal checkout in browser"
+  afdian:
+    label: "§e§l[Sponsor on Afdian]"
+    hover: "§7Open Afdian sponsorship page\n§7Please enter your player name in the remark"
+  afdian-remark: "§c§lImportant: §eEnter your player name §f%player% §ein the remark!"
+  afdian-remark-hint: "§7Otherwise payment cannot be auto-confirmed!"
+
+link: "§7Link: %url%"
+order-id: "§7Order ID: %id%"
+
+command:
+  help:
+    title: "§6====== WindyPurchase ======"
+    list: "§e/purchase list §f- View products"
+    buy: "§e/purchase buy <id> [alipay|wechat|paypal|afdian] §f- Buy product"
+    pay: "§e/purchase pay <amount> [alipay|wechat|paypal|afdian] §f- Top up"
+    history: "§e/purchase history §f- Order history"
+    check: "§e/purchase check <id> §f- Check order status"
+  list:
+    title: "§6====== Products ======"
+    item: "§e%id% §f- §a%name% §f| §6%price% §f%currency%"
+    empty: "§cNo products available."
+    hint: "§7Use /purchase buy <id> to purchase"
+  buy:
+    usage: "§cUsage: /purchase buy <product_id> [alipay|wechat|paypal|afdian]"
+    no-product: "§cProduct not found: %id%"
+    no-permission: "§cYou don't have permission to buy this."
+    creating: "§aCreating order..."
+    failed: "§cFailed to create order. Please try again."
+  pay:
+    usage: "§cUsage: /purchase pay <amount> [alipay|wechat|paypal|afdian]"
+    invalid-amount: "§cInvalid amount. Minimum: %min% %currency%."
+    creating: "§aCreating order..."
+    failed: "§cFailed to create order. Please try again."
+  history:
+    title: "§6====== Recent Orders ======"
+    item: "§f%id% §7| §6%amount% §7| %status%"
+    empty: "§7No order history."
+  check:
+    usage: "§cUsage: /purchase check <order_id>"
+    not-found: "§cOrder not found."
+    title: "§6====== Order Details ======"
+    order-id: "§fOrder ID: %id%"
+    amount: "§fAmount: §6%amount% %currency%"
+    status: "§fStatus: %status%"
+    method: "§fMethod: %method%"
+    created: "§fCreated: %time%"
+    paid: "§fPaid: %time%"
+  select-method: "§ePlease select payment method: %methods%"
+  select-method-hint: "§7Usage: /purchase pay <amount> <alipay|wechat|paypal|afdian>"
+  no-method: "§cNo payment methods available. Contact admin."
+  player-only: "§cThis command can only be used by players."
+
+admin:
+  help:
+    title: "§6====== WindyPurchase Admin ======"
+    reload: "§e/purchaseadmin reload §f- Reload products"
+    stats: "§e/purchaseadmin stats §f- Revenue statistics"
+    check: "§e/purchaseadmin check <id> §f- View order details"
+    products: "§e/purchaseadmin products §f- Product list"
+  reload:
+    success: "§aReloaded %count% products."
+    no-file: "§cproducts.yml not found."
+    note: "§eNote: Payment config changes require server restart."
+  stats:
+    title: "§6====== Revenue ======"
+    total: "§fTotal: §6%amount% %currency%"
+    today: "§fToday: §6%amount% %currency%"
+    orders: "§fTotal orders: §e%count%"
+    ranking-title: "§6------ Top Spenders ------"
+    ranking-item: "§e%rank%. §f%player% §7- §6%amount% %currency%"
+  products:
+    title: "§6====== Products ======"
+    item: "§e%id% §f| §a%name% §f| §6%price% %currency%"
+    commands: "  §7Commands: %cmds%"
+    permission: "  §7Permission: %perm%"
+    cooldown: "  §7Cooldown: %sec%s"
+    empty: "§cNo products."
+
+status:
+  pending: "§ePending"
+  paid: "§aPaid"
+  expired: "§cExpired"
+  cancelled: "§cCancelled"
+
+health:
+  ok: "§aOK"

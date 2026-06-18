@@ -1,0 +1,40 @@
+// ============================================================
+// WindyPurchase — 多模块根构建（聚合器，本身不产出制品）
+//   core      — 平台无关核心（订单/商品模型、支付接口抽象、数据库、配置）
+//   velocity  — Velocity 代理端插件 + 内嵌 HTTP 服务端
+//   bukkit    — Bukkit 预留（暂空壳）
+// ============================================================
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '2.2.20' apply false
+    id 'com.gradleup.shadow' version '9.4.2' apply false
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'org.jetbrains.kotlin.jvm'
+
+    group = mod_group_id
+    version = mod_version
+
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'papermc'
+            url = 'https://repo.papermc.io/repository/maven-public/'
+        }
+        maven {
+            name = 'papermc-snapshots'
+            url = 'https://repo.papermc.io/repository/maven-snapshots/'
+        }
+        // 微信支付 SDK（JitPack）
+        maven {
+            name = 'jitpack'
+            url = 'https://jitpack.io'
+        }
+    }
+
+    java.toolchain.languageVersion = JavaLanguageVersion.of(11)
+    kotlin {
+        jvmToolchain(11)
+    }
+}

@@ -1,0 +1,50 @@
+// ============================================================
+// velocity — Velocity 代理端插件 + 内嵌 HTTP 服务端
+//   shadowJar 产出 fat jar，含全部依赖
+// ============================================================
+plugins {
+    id 'com.gradleup.shadow'
+}
+
+base {
+    archivesName = mod_id
+}
+
+dependencies {
+    // Velocity 运行时自带，不打包
+    compileOnly 'com.velocitypowered:velocity-api:3.1.1'
+
+    // 核心逻辑（传递 Jackson、ZXing、SQLite 等）
+    implementation project(':core')
+
+    // Jackson（HttpServer 需要）
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+
+    // Netty（MapPacketSender 发原始包用，Velocity 自带但 compileOnly 不传递）
+    implementation 'io.netty:netty-buffer:4.1.107.Final'
+    implementation 'io.netty:netty-transport:4.1.107.Final'
+
+    // ZXing（二维码生成）
+    implementation 'com.google.zxing:core:3.5.3'
+}
+
+shadowJar {
+    archiveClassifier.set('')
+
+    // 重定位 guava 避免与 Velocity 自带版本冲突
+    relocate 'com.google.common', 'org.windy.libs.guava'
+    relocate 'com.google.zxing', 'org.windy.libs.zxing'
+    relocate 'com.alipay', 'org.windy.libs.alipay'
+    relocate 'com.wechat', 'org.windy.libs.wechat'
+    relocate 'org.sqlite', 'org.windy.libs.sqlite'
+
+    dependencies {
+        exclude(dependency('org.slf4j:slf4j-api'))
+    }
+
+    mergeServiceFiles()
+}
+
+tasks.named('build') {
+    dependsOn tasks.named('shadowJar')
+}

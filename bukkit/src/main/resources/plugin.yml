@@ -1,0 +1,5 @@
+name: WindyPurchase
+version: 1.0-SNAPSHOT
+main: org.windy.purchase.bukkit.WindyPurchaseBukkitPlugin
+description: In-game payment plugin for Minecraft (Alipay / WeChat Pay) - Bukkit placeholder
+api-version: '1.13'
