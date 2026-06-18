@@ -75,15 +75,16 @@ class PurchaseApiImpl(
     // ==================== 管理 ====================
 
     override fun grantOrder(playerName: String, amountFen: Int, commands: List<String>): Order {
-        val orderId = UUID.randomUUID().toString().replace("-", "")
+        val orderId = "grant_" + UUID.randomUUID().toString().replace("-", "")
         val order = Order(
             orderId = orderId, playerId = playerName, playerName = playerName,
             productId = null, amount = amountFen, paymentMethod = "admin-grant",
-            status = OrderStatus.PAID, commands = commands.map { it.replace("%player%", playerName) }
+            status = OrderStatus.PAID, commands = commands
         )
         order.paidAt = System.currentTimeMillis()
-        db.insertOrder(order)
-        db.updateOrderStatus(orderId, OrderStatus.PAID, order.paidAt)
+        db.insertOrder(order)  // 已带 status=PAID，无需再 update
+        // 走正常发奖通知管线：执行命令 + 按 UUID/玩家名通知在线玩家
+        notifier?.onPaid(order)
         return order
     }
 

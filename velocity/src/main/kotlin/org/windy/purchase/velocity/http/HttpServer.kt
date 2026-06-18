@@ -273,13 +273,13 @@ class HttpServer(
         val b = body(ex)
         val player = b["player"]?.asText() ?: return respond(ex, 400, err("player required"))
         val amount = b["amount"]?.asInt()?.takeIf { it > 0 } ?: return respond(ex, 400, err("amount required"))
-        val cmds = (b["commands"]?.map { it.asText() } ?: emptyList()).map { it.replace("%player%", player) }
-        val orderId = UUID.randomUUID().toString().replace("-", "")
+        val cmds = b["commands"]?.map { it.asText() } ?: emptyList()
+        val orderId = "grant_" + UUID.randomUUID().toString().replace("-", "")
         val order = Order(orderId, player, player, null, amount, "CNY", "admin-grant", OrderStatus.PAID, commands = cmds)
         order.paidAt = System.currentTimeMillis()
-        db.insertOrder(order)
-        db.updateOrderStatus(orderId, OrderStatus.PAID, order.paidAt)
-        cmds.forEach { commandExecutor?.invoke(it) }
+        db.insertOrder(order)  // 已带 status=PAID
+        // 统一走发奖管线（执行命令 + 通知玩家）；notifier 缺失时退回直接执行命令
+        notifier?.onPaid(order) ?: cmds.forEach { commandExecutor?.invoke(it.replace("%player%", player)) }
         json(ex, 200, obj { put("orderId", orderId); put("player", player); put("amount", amount) })
     }
 
