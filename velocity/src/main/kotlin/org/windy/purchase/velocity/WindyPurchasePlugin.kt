@@ -127,10 +127,12 @@ class WindyPurchasePlugin @Inject constructor(
             val player = server.getPlayer(order.playerId).orElse(null)
             if (player != null) {
                 payNotifier.onPaid(order)
-                val rewardCmds = dailyReward.checkAndClaim(order.playerId, order.playerName, order.amount)
-                if (rewardCmds != null) {
-                    for (cmd in rewardCmds) server.commandManager.executeAsync(server.consoleCommandSource, cmd)
-                    player.sendMessage(net.kyori.adventure.text.Component.text("§6[WindyPurchase] §e每日首充奖励已发放！"))
+                if (config.moduleDailyReward()) {
+                    val rewardCmds = dailyReward.checkAndClaim(order.playerId, order.playerName, order.amount)
+                    if (rewardCmds != null) {
+                        for (cmd in rewardCmds) server.commandManager.executeAsync(server.consoleCommandSource, cmd)
+                        player.sendMessage(net.kyori.adventure.text.Component.text("§6[WindyPurchase] §e每日首充奖励已发放！"))
+                    }
                 }
             } else {
                 offlineCache.add(order.playerId, order)
@@ -141,7 +143,7 @@ class WindyPurchasePlugin @Inject constructor(
         paymentManager = manager
         loadProducts(database, dataDirectory.resolve("products.yml").toFile())
 
-        val http = HttpServer(config.httpHost(), config.httpPort(), config.httpToken(), manager, database, logger, payNotifier, cache, dataDirectory)
+        val http = HttpServer(config.httpHost(), config.httpPort(), config.httpToken(), manager, database, logger, payNotifier, cache, dataDirectory, dashboardEnabled = config.moduleDashboard())
         http.commandExecutor = { cmd -> server.commandManager.executeAsync(server.consoleCommandSource, cmd) }
         http.start()
         httpServer = http
@@ -158,7 +160,7 @@ class WindyPurchasePlugin @Inject constructor(
             }
         })
 
-        server.commandManager.register(server.commandManager.metaBuilder("purchase").plugin(this).build(), PurchaseCommand(manager, database, server, logger, payNotifier, messages, promoManager, dailyReward))
+        server.commandManager.register(server.commandManager.metaBuilder("purchase").plugin(this).build(), PurchaseCommand(manager, database, server, logger, payNotifier, messages, promoManager, dailyReward, config.modulePromoCode(), config.moduleRanking()))
         server.commandManager.register(server.commandManager.metaBuilder("purchaseadmin").plugin(this).build(), PurchaseAdminCommand(manager, database, config, logger, dataDirectory, messages))
 
         org.windy.purchase.core.api.PurchaseApiProvider.register(org.windy.purchase.velocity.api.PurchaseApiImpl(manager, database, payNotifier, dataDirectory))

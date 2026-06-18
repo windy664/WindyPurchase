@@ -32,7 +32,9 @@ class PurchaseCommand(
     private val notifier: PaymentNotifier,
     private val msg: Messages,
     private val promoManager: PromoCodeManager,
-    private val dailyReward: DailyRewardManager
+    private val dailyReward: DailyRewardManager,
+    private val promoEnabled: Boolean = false,
+    private val rankingEnabled: Boolean = false
 ) : RawCommand {
 
     /** 玩家最近一笔待支付订单 ID（方便 /purchase pending 和 cancel） */
@@ -53,7 +55,7 @@ class PurchaseCommand(
             "pay" -> handlePay(source, args)
             "history" -> handleHistory(source)
             "check" -> handleCheck(source, args)
-            "top" -> handleTop(source)
+            "top" -> if (rankingEnabled) handleTop(source) else source.sendMessage(Component.text("§7充值排行榜未开启。"))
             "pending" -> handlePending(source)
             "cancel" -> handleCancel(source)
             else -> sendHelp(source)
@@ -144,6 +146,9 @@ class PurchaseCommand(
         if (method == null) method = resolvePaymentMethod(source) ?: return
 
         if (promoCode != null) {
+            if (!promoEnabled) {
+                source.sendMessage(Component.text("§c优惠码功能未开启。")); return
+            }
             val discounted = promoManager.apply(promoCode, amountFen, null)
             if (discounted != null) {
                 val saved = amountFen - discounted

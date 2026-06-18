@@ -33,6 +33,16 @@ class PurchaseConfig private constructor(private val map: Map<String, Any?>) {
         return raw.mapNotNull { (k, v) -> (v as? Number)?.toInt()?.let { k to it } }.toMap()
     }
 
+    // ==================== 可选模块（纯网关定位：默认全关，按需开启） ====================
+    /** 每日首充奖励。 */
+    fun moduleDailyReward(): Boolean = get("modules.daily-reward", false)
+    /** 优惠码。 */
+    fun modulePromoCode(): Boolean = get("modules.promo-code", false)
+    /** 充值排行榜（/purchase top 命令 + /api/revenue/ranking）。 */
+    fun moduleRanking(): Boolean = get("modules.ranking", false)
+    /** 内嵌 Web 管理面板静态页（支付回调等 API 始终可用，不受此开关影响）。 */
+    fun moduleDashboard(): Boolean = get("modules.dashboard", false)
+
     // ==================== Mock（测试用） ====================
     fun mockEnabled(): Boolean = get("mock.enabled", true)
     /** 自动确认延迟（毫秒），0 = 手动确认 */
@@ -149,6 +159,18 @@ payment:
     # 按支付方式覆盖少付容差。爱发电含平台手续费，到账可能略低于应付，可适当放宽。
     underpay-overrides:
       afdian: 5
+
+# 可选模块（纯网关定位：默认全关，按需开启）
+# 注意：REST API 与内部 Java API 始终可用，不受这些开关影响。
+modules:
+  # 每日首充奖励（支付成功后额外发放）
+  daily-reward: false
+  # 优惠码（下单时按码减免）
+  promo-code: false
+  # 充值排行榜的玩家命令 /purchase top（/api/revenue/ranking 接口始终可用）
+  ranking: false
+  # 内嵌 Web 管理面板静态页（前端后续单独开发；API 不受影响）
+  dashboard: false
 
 # Mock 支付（测试用，生产环境请关闭）
 # /purchase pay 0.01 mock → 自动确认到账

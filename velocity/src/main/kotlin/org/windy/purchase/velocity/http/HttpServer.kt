@@ -39,6 +39,8 @@ class HttpServer(
     private val notifier: PaymentNotifier? = null,
     private val statsCache: PlayerStatsCache? = null,
     private val dataDir: Path? = null,
+    /** 是否服务内嵌静态页（前端面板）。默认关；REST API 始终可用，不受此影响。 */
+    private val dashboardEnabled: Boolean = false,
     private val threadPoolSize: Int = Runtime.getRuntime().availableProcessors(),
     var commandExecutor: ((String) -> Unit)? = null
 ) {
@@ -293,6 +295,7 @@ class HttpServer(
     // ==================== 静态资源 ====================
 
     private fun serveStatic(ex: HttpExchange) {
+        if (!dashboardEnabled) return respond(ex, 404, err("Dashboard disabled"))
         val path = ex.requestURI.path.let { if (it == "/") "/index.html" else it }
         if (path.contains("..")) return respond(ex, 403, err("Forbidden"))
         val bytes = loadRes(path) ?: loadRes("/index.html") ?: return respond(ex, 404, err("Not found"))
