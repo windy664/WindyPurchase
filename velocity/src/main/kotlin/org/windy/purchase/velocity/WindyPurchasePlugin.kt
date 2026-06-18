@@ -64,7 +64,12 @@ class WindyPurchasePlugin @Inject constructor(
         val cache = PlayerStatsCache(database)
         statsCache = cache
 
-        val manager = PaymentManager(db = database, orderTimeoutMs = config.orderTimeoutSeconds() * 1000L, pollIntervalMs = config.orderPollIntervalMs(), statsCache = cache)
+        val amountTolerance = AmountTolerance(
+            defaultUnderpayPercent = config.underpayTolerancePercent(),
+            overpayPercent = config.overpayTolerancePercent(),
+            underpayPercentByMethod = config.underpayToleranceOverrides()
+        )
+        val manager = PaymentManager(db = database, orderTimeoutMs = config.orderTimeoutSeconds() * 1000L, pollIntervalMs = config.orderPollIntervalMs(), statsCache = cache, amountTolerance = amountTolerance)
 
         // 注册支付方式
         if (config.alipayEnabled()) manager.registerProvider(AlipayProvider(config.alipayAppId(), config.alipayPrivateKey(), config.alipayPublicKey(), config.alipayNotifyUrl(), sandbox = config.alipaySandbox()))

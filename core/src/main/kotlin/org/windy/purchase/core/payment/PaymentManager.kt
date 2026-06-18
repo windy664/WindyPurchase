@@ -17,7 +17,8 @@ class PaymentManager(
     private val db: Database,
     private val orderTimeoutMs: Long = 300_000L,
     private val pollIntervalMs: Long = 3000L,
-    private val statsCache: PlayerStatsCache? = null
+    private val statsCache: PlayerStatsCache? = null,
+    private val amountTolerance: AmountTolerance = AmountTolerance()
 ) {
     private val log = LoggerFactory.getLogger(PaymentManager::class.java)
     private val providers = ConcurrentHashMap<String, PaymentProvider>()
@@ -176,17 +177,24 @@ class PaymentManager(
         }
         if (order.status != OrderStatus.PENDING) return
 
-        // 金额校验：支付宝/微信严格校验，爱发电/PayPal 允许差异
+        // 金额校验：方向感知。少付从严（防欺诈），多付放行（玩家多付不亏服主）。
+        // PayPal 走 capture 服务端确认，回调传 null 不校验金额。
         if (paidAmount != null && order.amount > 0) {
-            val diff = kotlin.math.abs(paidAmount - order.amount)
-            val allowDiff = when (order.paymentMethod) {
-                "afdian" -> order.amount / 10  // 爱发电允许 10% 误差（含手续费）
-                "paypal" -> order.amount / 10  // PayPal 允许汇率差异
-                else -> 1                      // 支付宝/微信精确到分
-            }
-            if (diff > allowDiff) {
-                log.warn("订单 {} 金额不匹配: 期望={} 实付={} 允许误差={}", orderId, order.amount, paidAmount, allowDiff)
-                return  // 金额不匹配，拒绝
+            val expected = order.amount
+            if (paidAmount < expected) {
+                // 少付：仅允许小额容差（爱发电含平台手续费等场景，按方式配置），超出即拒单
+                val allow = expected * amountTolerance.underpayPercent(order.paymentMethod) / 100
+                if (expected - paidAmount > allow) {
+                    log.warn("订单 {} 少付拒单: 应付={} 实付={} 少付容差={}", orderId, expected, paidAmount, allow)
+                    return
+                }
+            } else if (paidAmount > expected) {
+                // 多付：默认放行；仅当配置了多付上限(>=0)时校验异常多付（可能是订单匹配错误）
+                val overLimitPercent = amountTolerance.overpayPercent
+                if (overLimitPercent >= 0 && paidAmount - expected > expected * overLimitPercent / 100) {
+                    log.warn("订单 {} 多付异常拒单: 应付={} 实付={} 多付上限%={}", orderId, expected, paidAmount, overLimitPercent)
+                    return
+                }
             }
         }
 
@@ -237,4 +245,20 @@ class PaymentManager(
         }
         activeOrders.clear()
     }
+}
+
+/**
+ * 金额校验容差配置（百分比）。
+ *
+ * 设计原则：少付从严、多付放行。
+ * - [defaultUnderpayPercent] 少付容差默认值，0 = 精确到分。
+ * - [underpayPercentByMethod] 按支付方式覆盖少付容差（如爱发电含平台手续费，可适当放宽）。
+ * - [overpayPercent] 多付容差上限；-1 = 不限制（玩家多付不拒单，默认）。
+ */
+data class AmountTolerance(
+    val defaultUnderpayPercent: Int = 0,
+    val overpayPercent: Int = -1,
+    val underpayPercentByMethod: Map<String, Int> = emptyMap()
+) {
+    fun underpayPercent(method: String): Int = underpayPercentByMethod[method] ?: defaultUnderpayPercent
 }

@@ -21,6 +21,18 @@ class PurchaseConfig private constructor(private val map: Map<String, Any?>) {
     fun orderTimeoutSeconds(): Int = get("order.timeout-seconds", 300)
     fun orderPollIntervalMs(): Long = get("order.poll-interval-ms", 3000L)
 
+    // ==================== 金额校验容差 ====================
+    /** 少付容差（百分比，0=精确到分）。实付低于应付超过此比例则拒单。 */
+    fun underpayTolerancePercent(): Int = get("payment.amount-check.underpay-tolerance-percent", 0)
+    /** 多付容差上限（百分比，-1=不限制，玩家多付不拒单）。 */
+    fun overpayTolerancePercent(): Int = get("payment.amount-check.overpay-tolerance-percent", -1)
+    /** 按支付方式覆盖少付容差（如爱发电含平台手续费）。 */
+    fun underpayToleranceOverrides(): Map<String, Int> {
+        @Suppress("UNCHECKED_CAST")
+        val raw = get("payment.amount-check.underpay-overrides", emptyMap<String, Any?>()) as? Map<String, Any?> ?: return emptyMap()
+        return raw.mapNotNull { (k, v) -> (v as? Number)?.toInt()?.let { k to it } }.toMap()
+    }
+
     // ==================== Mock（测试用） ====================
     fun mockEnabled(): Boolean = get("mock.enabled", true)
     /** 自动确认延迟（毫秒），0 = 手动确认 */
@@ -125,6 +137,18 @@ order:
   timeout-seconds: 300
   # 轮询间隔（毫秒）
   poll-interval-ms: 3000
+
+# 金额校验（防欺诈核心）
+# 原则：少付从严、多付放行。
+payment:
+  amount-check:
+    # 少付容差（百分比，0=精确到分）。实付低于应付超过此比例则拒单。
+    underpay-tolerance-percent: 0
+    # 多付容差上限（百分比，-1=不限制，玩家多付不拒单）。
+    overpay-tolerance-percent: -1
+    # 按支付方式覆盖少付容差。爱发电含平台手续费，到账可能略低于应付，可适当放宽。
+    underpay-overrides:
+      afdian: 5
 
 # Mock 支付（测试用，生产环境请关闭）
 # /purchase pay 0.01 mock → 自动确认到账
