@@ -88,6 +88,24 @@ class Database(dbPath: String) {
         }
     }
 
+    /**
+     * 幂等插入：主键(order_id)冲突则忽略，不覆盖已有行。
+     * 用于确定性 ID 的订单（如爱发电 plans 虚拟单），让 orders 表本身充当持久去重账本。
+     * @return true 表示本次确实插入了新行；false 表示该订单已存在。
+     */
+    fun insertOrderIfAbsent(order: Order): Boolean = lock.withLock {
+        conn.prepareStatement(
+            "INSERT OR IGNORE INTO orders (order_id, player_id, player_name, product_id, amount, currency, payment_method, status, qr_code_url, raw_url, created_at, paid_at, commands, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)"
+        ).use { ps ->
+            ps.setString(1, order.orderId); ps.setString(2, order.playerId); ps.setString(3, order.playerName)
+            ps.setString(4, order.productId); ps.setInt(5, order.amount); ps.setString(6, order.currency)
+            ps.setString(7, order.paymentMethod); ps.setString(8, order.status.name); ps.setString(9, order.qrCodeUrl)
+            ps.setString(10, order.rawUrl); ps.setLong(11, order.createdAt); ps.setObject(12, order.paidAt)
+            ps.setString(13, order.commands.joinToString("|§|"))
+            ps.executeUpdate() > 0
+        }
+    }
+
     fun updateOrderStatusCAS(orderId: String, expectedStatus: OrderStatus, newStatus: OrderStatus, paidAt: Long?): Boolean = lock.withLock {
         conn.prepareStatement("UPDATE orders SET status = ?, paid_at = ?, version = version + 1 WHERE order_id = ? AND status = ?").use { ps ->
             ps.setString(1, newStatus.name); ps.setObject(2, paidAt); ps.setString(3, orderId); ps.setString(4, expectedStatus.name)

@@ -13,8 +13,8 @@ import java.util.concurrent.ConcurrentHashMap
  * 爱发电轮询器。
  *
  * 优化：
- * - processedOrders 用 ConcurrentHashMap.KeySet 线程安全
- * - handlePaid 用 CAS 防重复处理
+ * - processedOrders 内存集合仅作快路径；持久去重靠 orders 表（plans 用确定性 ID + CAS）
+ * - handlePaid 用 CAS 防重复处理，跨重启/清表崩溃安全
  * - poll 只拉最近 3 页，不遍历全部历史
  */
 class AfdianPoller(
@@ -26,11 +26,10 @@ class AfdianPoller(
     private val log = LoggerFactory.getLogger(AfdianPoller::class.java)
     private val timer = Timer("afdian-poll", true)
     private val processedOrders: MutableSet<String> = ConcurrentHashMap.newKeySet()
-    /** 防内存溢出：上限 5000 条，超出时清空（靠 CAS 防重复，不会丢数据） */
+    /** 防内存溢出：上限 5000 条，超出时清空（持久去重靠 orders 表，清空不会导致重复发奖） */
     private val maxProcessedSize = 5000
 
     var onPaymentSuccess: ((Order) -> Unit)? = null
-    var createVirtualOrder: ((String, List<String>) -> Order?)? = null
 
     /** 每次轮询最多拉几页（避免全量遍历） */
     private val maxPagesPerPoll = 3
@@ -83,7 +82,7 @@ class AfdianPoller(
     }
 
     private fun matchOrder(afdianOrder: AfdianOrder): Order? {
-        // 方式 1：custom_order_id 匹配
+        // 方式 1：custom_order_id 匹配既有本地订单（CAS 在该订单上，天然持久幂等）
         if (afdianOrder.customOrderId.isNotBlank()) {
             val local = db.getOrder(afdianOrder.customOrderId)
             if (local != null && local.status == OrderStatus.PENDING && local.paymentMethod == "afdian") {
@@ -91,13 +90,29 @@ class AfdianPoller(
             }
         }
 
-        // 方式 2：plans 模式
+        // 方式 2：plans 模式（玩家直接在爱发电赞助，无本地订单）
         val playerName = afdianOrder.remark.trim()
         if (playerName.isBlank()) return null
 
         val matchedPlan = matchPlan(afdianOrder.title) ?: return null
         log.info("Afdian plan matched: title='{}' -> plan='{}' player={}", afdianOrder.title, matchedPlan.title, playerName)
-        return createVirtualOrder?.invoke(playerName, matchedPlan.commands.map { it.replace("%player%", playerName) })
+
+        // 用 out_trade_no 派生确定性 orderId + INSERT OR IGNORE，让 orders 表充当持久去重账本。
+        // 首次：插入 PENDING → 下方 CAS 成功发奖；重复（重启/清表后）：插入忽略且行已 PAID → CAS 失败不重复发奖；
+        // 上次崩溃遗留 PENDING：插入忽略 → CAS 成功补发，崩溃安全的恰好一次。
+        val virtualId = "afdian_${afdianOrder.outTradeNo}"
+        val virtual = Order(
+            orderId = virtualId,
+            playerId = playerName,
+            playerName = playerName,
+            productId = null,
+            amount = afdianOrder.totalAmount,
+            paymentMethod = "afdian",
+            commands = matchedPlan.commands.map { it.replace("%player%", playerName) }
+        )
+        db.insertOrderIfAbsent(virtual)
+        // 返回库里的权威副本（可能是已存在的已付单），交由 handlePaid 的 CAS 裁决
+        return db.getOrder(virtualId)
     }
 
     /**

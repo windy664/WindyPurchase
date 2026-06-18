@@ -82,7 +82,6 @@ class WindyPurchasePlugin @Inject constructor(
             if (config.afdianPollEnabled()) {
                 val poller = AfdianPoller(afdianProvider, database, config.afdianPollIntervalMs(), config.afdianPlans())
                 poller.onPaymentSuccess = { order -> notifier?.onPaid(order) }
-                poller.createVirtualOrder = { playerName, commands -> manager.createOrder(playerName, playerName, 0, "afdian", commands = commands) }
                 poller.start()
                 afdianPoller = poller
             }
