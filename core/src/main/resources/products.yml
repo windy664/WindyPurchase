@@ -1,0 +1,26 @@
+# ============================================
+# WindyPurchase 商品定义
+# ============================================
+# 每个商品：
+#   id          商品唯一 ID（/purchase buy <id>）
+#   name        显示名
+#   price       价格（元）
+#   description 说明
+#   commands    支付成功后执行的命令（%player% 替换为玩家名）
+#   permission  购买所需权限节点（留空=无限制）
+#   cooldown    购买冷却（秒，0=无冷却）
+products:
+  - id: "vip_monthly"
+    name: "VIP月卡"
+    price: 30
+    description: "30天VIP权限"
+    commands: ["lp user %player% parent add vip 30d"]
+    permission: ""
+    cooldown: 0
+  - id: "diamond_pack"
+    name: "钻石礼包"
+    price: 10
+    description: "获得64颗钻石"
+    commands: ["give %player% diamond 64"]
+    permission: ""
+    cooldown: 60

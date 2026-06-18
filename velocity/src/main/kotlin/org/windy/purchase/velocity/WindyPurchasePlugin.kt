@@ -224,7 +224,11 @@ class WindyPurchasePlugin @Inject constructor(
     }
 
     private fun loadProducts(db: Database, file: File) {
-        if (!file.exists()) { file.writeText(DEFAULT_PRODUCTS); logger.info("Released default products.yml") }
+        if (!file.exists()) {
+            val def = javaClass.getResourceAsStream("/products.yml")?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+            if (def != null) { file.writeText(def); logger.info("Released default products.yml") }
+            else logger.warn("内置 products.yml 资源缺失，跳过释放默认商品")
+        }
         val count = org.windy.purchase.velocity.api.PurchaseApiImpl.loadProductsFromFile(db, file)
         logger.info("Loaded {} products", count)
     }
@@ -242,25 +246,5 @@ class WindyPurchasePlugin @Inject constructor(
         db?.close()
         txLog?.close()
         logger.info("WindyPurchase stopped.")
-    }
-
-    companion object {
-        val DEFAULT_PRODUCTS = """
-products:
-  - id: "vip_monthly"
-    name: "VIP月卡"
-    price: 30
-    description: "30天VIP权限"
-    commands: ["lp user %player% parent add vip 30d"]
-    permission: ""
-    cooldown: 0
-  - id: "diamond_pack"
-    name: "钻石礼包"
-    price: 10
-    description: "获得64颗钻石"
-    commands: ["give %player% diamond 64"]
-    permission: ""
-    cooldown: 60
-""".trimIndent()
     }
 }
