@@ -1,4 +1,15 @@
+<div align="center">
+
+<img src="assets/banner.svg" alt="WindyPurchase" width="100%">
+
+</div>
+
 # WindyPurchase
+
+![Language](https://img.shields.io/badge/Kotlin-2.x-7f52ff?style=flat-square&logo=kotlin&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Velocity-1e5c97?style=flat-square&logo=velocity&logoColor=white)
+![Pay](https://img.shields.io/badge/Alipay%20%2F%20WeChat-Native%20Pay-22c55e?style=flat-square)
+![Storage](https://img.shields.io/badge/Storage-SQLite-4479a1?style=flat-square)
 
 Minecraft 游戏内支付插件，支持支付宝当面付和微信 Native 支付。
 
